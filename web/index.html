@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0a0714" />
+  <meta name="description" content="Utility Outage Watchdog — load-shedding and municipal outage alerts for South Africa, delivered over Telegram with daily provider-credit budgeting." />
+  <title>Outage Watchdog — power alerts for South Africa</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="app.css" />
+  <link rel="stylesheet" href="theme.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="topbar">
+    <div class="shell topbar__inner">
+      <a class="brand" href="./" aria-label="Outage Watchdog home">
+        <span class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M13.2 3.5 5.8 13.4h5.1l-1.1 7.1 8.4-10.2h-5.2l.2-6.8Z" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="brand__name">Outage<span>Watchdog</span></span>
+        <span class="brand__tag">za · telegram</span>
+      </a>
+      <nav class="nav" aria-label="Primary">
+        <a href="#status" class="is-active">Status</a>
+        <a href="#schedule">Schedule</a>
+        <a href="#bot">Bot</a>
+        <span class="nav__divider" aria-hidden="true"></span>
+        <a href="https://github.com/sklevel8/utility-outage-watchdog" target="_blank" rel="noopener">GitHub ↗</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="shell page">
+    <section class="hero" id="status">
+      <div>
+        <div class="eyebrow"><span class="eyebrow__dot"></span> Live demo · fixture provider</div>
+        <h1>Know before <span>the lights go.</span></h1>
+        <p class="lede">
+          Subscribers pick a zone once. The watchdog polls the utility provider on a schedule,
+          diffs the outage plan, and sends one Telegram message per change — never a message per
+          poll — while staying inside a daily provider-credit budget.
+        </p>
+        <div class="hero-pills">
+          <span class="badge badge--warn"><span class="dot dot--pulse"></span> Stage 2 active</span>
+          <span class="badge">6 zones</span>
+          <span class="badge">142 subscribers</span>
+          <span class="badge">0 credits burned (fixture)</span>
+        </div>
+      </div>
+
+      <div class="card card--accent">
+        <div class="card__head">
+          <div>
+            <h2 class="card__title">Check a zone</h2>
+            <p class="card__hint">Type a suburb or zone id.</p>
+          </div>
+          <span class="badge badge--accent mono">ESP</span>
+        </div>
+        <form id="zoneForm" class="zone-form">
+          <div class="field">
+            <label class="field__label" for="zoneInput">Zone</label>
+            <input id="zoneInput" class="input" list="zones" type="text" placeholder="johannesburg" autocomplete="off" />
+            <datalist id="zones">
+              <option value="johannesburg">Johannesburg — Zone 4</option>
+              <option value="sandton">Sandton — Zone 2</option>
+              <option value="pretoria-east">Pretoria East — Zone 7</option>
+              <option value="cape-town-cbd">Cape Town CBD — Zone 1</option>
+              <option value="durban-north">Durban North — Zone 3</option>
+              <option value="gqeberha">Gqeberha — Zone 5</option>
+            </datalist>
+          </div>
+          <button class="btn btn--primary" type="submit">Look up</button>
+        </form>
+        <div id="zoneResult" class="zone-result">
+          <div class="zone-result__head">
+            <strong>Johannesburg — Zone 4</strong>
+            <span class="badge badge--warn">Stage 2</span>
+          </div>
+          <p class="tiny dim">Next slot · today 18:00–20:30</p>
+          <div class="countdown" id="countdown">02:41:18</div>
+          <p class="tiny dim">until the next scheduled outage</p>
+        </div>
+        <p class="tiny dim" style="margin-top:12px">Fixture data only — no provider credits are consumed in this demo.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="grid grid--4">
+        <div class="card metric"><span class="stat__label">Subscribers</span><span class="stat__value">142</span><span class="stat__meta"><span class="delta delta--up">▲ 18 this week</span></span></div>
+        <div class="card metric"><span class="stat__label">Zones polled</span><span class="stat__value">6</span><span class="stat__meta">every 15 minutes</span></div>
+        <div class="card metric"><span class="stat__label">Messages today</span><span class="stat__value">37</span><span class="stat__meta">1 per state change</span></div>
+        <div class="card metric"><span class="stat__label">Credit budget</span><span class="stat__value">132<span class="unit">/500</span></span><span class="stat__meta">26% of daily limit</span></div>
+      </div>
+    </section>
+
+    <section class="section" id="schedule">
+      <div class="section__head">
+        <div>
+          <h2 class="h2">Upcoming schedule</h2>
+          <p class="section__desc">Stage 2 rotation for the selected zone. Times are local (SAST).</p>
+        </div>
+        <div class="row">
+          <span class="badge">updated 09:12</span>
+          <button class="btn btn--sm btn--ghost" type="button" id="refreshBtn">Refresh plan</button>
+        </div>
+      </div>
+
+      <div class="grid grid--sidebar">
+        <div class="card card--flush">
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>Date</th><th>Window</th><th>Duration</th><th>Stage</th><th>Status</th></tr></thead>
+              <tbody id="scheduleBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <aside class="card">
+          <div class="card__head">
+            <div>
+              <h3 class="card__title">Credit ledger</h3>
+              <p class="card__hint">Provider calls today</p>
+            </div>
+            <span class="badge badge--ok">within budget</span>
+          </div>
+          <div class="budget">
+            <div class="budget__bar"><span style="width:26.4%"></span></div>
+            <div class="budget__row"><span class="dim tiny">132 used</span><span class="dim tiny">368 remaining</span></div>
+          </div>
+          <ul class="list" style="margin-top:14px">
+            <li class="list__item"><div class="list__body"><div class="list__title">Poll cycle</div><div class="list__meta">96 calls · 15-minute interval</div></div><span class="mono tiny dim">64%</span></li>
+            <li class="list__item"><div class="list__body"><div class="list__title">Manual lookups</div><div class="list__meta">31 calls · bot users</div></div><span class="mono tiny dim">21%</span></li>
+            <li class="list__item"><div class="list__body"><div class="list__title">Verification sweeps</div><div class="list__meta">5 calls · post-deploy</div></div><span class="mono tiny dim">4%</span></li>
+          </ul>
+          <p class="tiny dim" style="margin-top:12px">A hard stop at 500 prevents a runaway loop from exhausting the account.</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section" id="bot">
+      <div class="section__head">
+        <div>
+          <h2 class="h2">Try the Telegram bot</h2>
+          <p class="section__desc">The parser is strict about zone ids: unknown zones are rejected before they create a row.</p>
+        </div>
+        <span class="badge">/start · /help · /subscribe · /status · /stop</span>
+      </div>
+
+      <div class="grid grid--sidebar">
+        <div class="card card--flush chat-card">
+          <div class="chat-head">
+            <span class="avatar" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-3.8-.8L3 20.5l1.4-4.1A8.2 8.2 0 0 1 3.6 11.5 8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4Z" stroke-linejoin="round"/></svg>
+            </span>
+            <div>
+              <strong>Outage Watchdog</strong>
+              <span class="tiny dim">bot · online</span>
+            </div>
+          </div>
+          <div class="chat" id="chat" aria-live="polite"></div>
+          <form class="chat-form" id="chatForm">
+            <label class="sr-only" for="chatInput">Message the bot</label>
+            <input id="chatInput" class="input mono" type="text" placeholder="/subscribe johannesburg" autocomplete="off" />
+            <button class="btn btn--primary" type="submit">Send</button>
+          </form>
+          <div class="chips" id="chips">
+            <button class="chip" type="button">/start</button>
+            <button class="chip" type="button">/subscribe johannesburg</button>
+            <button class="chip" type="button">/status</button>
+            <button class="chip" type="button">/subscribe narnia</button>
+          </div>
+        </div>
+
+        <aside class="card">
+          <h3 class="card__title">Why one message per change</h3>
+          <p class="muted small" style="margin-top:6px">
+            A naive bot messages every subscriber on every poll — six zones times ninety-six
+            polls is 576 provider calls and hundreds of duplicate messages a day. The watchdog
+            diffs the plan and only fans out on a real change.
+          </p>
+          <div class="rules-mini">
+            <div><span class="dot"></span><span><b>Dedupe</b> by zone + slot + stage</span></div>
+            <div><span class="dot"></span><span><b>Rate limit</b> per chat to survive Telegram 429s</span></div>
+            <div><span class="dot"></span><span><b>Budget</b> a hard daily provider credit ceiling</span></div>
+            <div><span class="dot"></span><span><b>Idempotent</b> webhook handling for retries</span></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section" id="zones">
+      <div class="section__head">
+        <div>
+          <h2 class="h2">Coverage</h2>
+          <p class="section__desc">Fixture zones used by the demo and the test suite.</p>
+        </div>
+      </div>
+      <div class="zone-grid" id="zoneGrid"></div>
+    </section>
+
+    <footer class="footer">
+      <div class="footer__inner">
+        <span>Built by Sipho Makubalo · Telegram delivery, provider-credit budgeting.</span>
+        <div class="row row--tight">
+          <a href="https://github.com/sklevel8/utility-outage-watchdog" target="_blank" rel="noopener">Source</a>
+          <span class="dim">·</span>
+          <a href="https://sklevel8-portfolio.netlify.app" target="_blank" rel="noopener">All projects</a>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
